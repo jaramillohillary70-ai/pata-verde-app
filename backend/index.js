@@ -34,6 +34,34 @@ app.post('/registro', (req, res) => {
   });
 });
 
+app.post('/login', (req, res) => {
+  const { email, contraseña } = req.body;
+
+  if (!email || !contraseña) {
+    return res.status(400).json({
+      error: 'Los campos email y contraseña son obligatorios',
+    });
+  }
+
+  const usuario = usuarios.find((item) => item.email === email);
+
+  if (!usuario) {
+    return res.status(404).json({
+      error: 'Usuario no encontrado',
+    });
+  }
+
+  if (usuario.contraseña !== contraseña) {
+    return res.status(401).json({
+      error: 'Contraseña incorrecta',
+    });
+  }
+
+  return res.status(200).json({
+    mensaje: 'Login exitoso',
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en el puerto ${PORT}`);
 });
