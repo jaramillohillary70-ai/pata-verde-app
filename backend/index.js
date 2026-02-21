@@ -1,11 +1,13 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = 4000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const ESTADOS_VALIDOS = ['pendiente', 'en_proceso', 'completada', 'cancelada'];
+const JWT_SECRET = process.env.JWT_SECRET || 'pata-verde-secret';
 
 app.use(express.json());
 
@@ -55,6 +57,28 @@ function writeData(data) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(sanitizedData, null, 2), 'utf8');
   } catch (error) {
     throw new Error(`No se pudo escribir data.json: ${error.message}`);
+  }
+}
+
+function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Token no proporcionado o formato inválido',
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+    return next();
+  } catch (_error) {
+    return res.status(401).json({
+      error: 'Token inválido',
+    });
   }
 }
 
@@ -140,8 +164,11 @@ app.post('/login', (req, res) => {
       });
     }
 
+    const token = jwt.sign({ userId: usuario.id }, JWT_SECRET, { expiresIn: '1h' });
+
     return res.status(200).json({
       mensaje: 'Login exitoso',
+      token,
     });
   } catch (error) {
     return res.status(500).json({
@@ -150,7 +177,7 @@ app.post('/login', (req, res) => {
   }
 });
 
-app.post('/recoleccion', (req, res) => {
+app.post('/recoleccion', verifyToken, (req, res) => {
   const { userId, direccion } = req.body;
 
   if (!userId || !direccion) {
@@ -164,6 +191,12 @@ app.post('/recoleccion', (req, res) => {
   if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
     return res.status(400).json({
       error: 'El userId debe ser un número entero positivo',
+    });
+  }
+
+  if (req.user.userId !== parsedUserId) {
+    return res.status(401).json({
+      error: 'Token inválido para el userId enviado',
     });
   }
 
@@ -195,7 +228,7 @@ app.post('/recoleccion', (req, res) => {
   }
 });
 
-app.put('/recoleccion/:id', (req, res) => {
+app.put('/recoleccion/:id', verifyToken, (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
@@ -244,7 +277,7 @@ app.put('/recoleccion/:id', (req, res) => {
   }
 });
 
-app.post('/canjear-cupon', (req, res) => {
+app.post('/canjear-cupon', verifyToken, (req, res) => {
   const { userId, tipo } = req.body;
 
   if (!userId || !tipo) {
@@ -258,6 +291,12 @@ app.post('/canjear-cupon', (req, res) => {
   if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
     return res.status(400).json({
       error: 'El userId debe ser un número entero positivo',
+    });
+  }
+
+  if (req.user.userId !== parsedUserId) {
+    return res.status(401).json({
+      error: 'Token inválido para el userId enviado',
     });
   }
 
