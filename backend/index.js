@@ -4,6 +4,7 @@ const app = express();
 const PORT = 4000;
 const usuarios = [];
 const solicitudesRecoleccion = [];
+const cupones = [];
 
 app.use(express.json());
 
@@ -117,6 +118,43 @@ app.put('/recoleccion/:id', (req, res) => {
   }
 
   return res.status(200).json(solicitud);
+});
+
+app.post('/canjear-cupon', (req, res) => {
+  const { userId, tipo } = req.body;
+
+  if (!userId || !tipo) {
+    return res.status(400).json({
+      error: 'Los campos userId y tipo son obligatorios',
+    });
+  }
+
+  const usuario = usuarios.find((item) => item.id === Number(userId));
+
+  if (!usuario) {
+    return res.status(404).json({
+      error: 'Usuario no encontrado',
+    });
+  }
+
+  if (usuario.puntos < 20) {
+    return res.status(400).json({
+      error: 'No tienes puntos suficientes para canjear un cupón',
+    });
+  }
+
+  usuario.puntos -= 20;
+
+  const nuevoCupon = {
+    id: cupones.length + 1,
+    userId: usuario.id,
+    tipo,
+    puntosCanjeados: 20,
+  };
+
+  cupones.push(nuevoCupon);
+
+  return res.status(201).json(nuevoCupon);
 });
 
 app.listen(PORT, () => {
