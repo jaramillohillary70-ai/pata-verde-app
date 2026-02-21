@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 const PORT = 4000;
 const usuarios = [];
+const solicitudesRecoleccion = [];
 
 app.use(express.json());
 
@@ -60,6 +61,27 @@ app.post('/login', (req, res) => {
   return res.status(200).json({
     mensaje: 'Login exitoso',
   });
+});
+
+app.post('/recoleccion', (req, res) => {
+  const { userId, direccion } = req.body;
+
+  if (!userId || !direccion) {
+    return res.status(400).json({
+      error: 'Los campos userId y direccion son obligatorios',
+    });
+  }
+
+  const nuevaSolicitud = {
+    id: solicitudesRecoleccion.length + 1,
+    userId,
+    direccion,
+    estado: 'pendiente',
+  };
+
+  solicitudesRecoleccion.push(nuevaSolicitud);
+
+  return res.status(201).json(nuevaSolicitud);
 });
 
 app.listen(PORT, () => {
