@@ -25,6 +25,7 @@ app.post('/registro', (req, res) => {
     nombre,
     email,
     contraseña,
+    puntos: 0,
   };
 
   usuarios.push(nuevoUsuario);
@@ -82,6 +83,40 @@ app.post('/recoleccion', (req, res) => {
   solicitudesRecoleccion.push(nuevaSolicitud);
 
   return res.status(201).json(nuevaSolicitud);
+});
+
+app.put('/recoleccion/:id', (req, res) => {
+  const { id } = req.params;
+  const { estado } = req.body;
+
+  if (!estado) {
+    return res.status(400).json({
+      error: 'El campo estado es obligatorio',
+    });
+  }
+
+  const solicitud = solicitudesRecoleccion.find(
+    (item) => item.id === Number(id),
+  );
+
+  if (!solicitud) {
+    return res.status(404).json({
+      error: 'Solicitud de recolección no encontrada',
+    });
+  }
+
+  const estadoAnterior = solicitud.estado;
+  solicitud.estado = estado;
+
+  if (estadoAnterior !== 'completada' && estado === 'completada') {
+    const usuario = usuarios.find((item) => item.id === solicitud.userId);
+
+    if (usuario) {
+      usuario.puntos += 10;
+    }
+  }
+
+  return res.status(200).json(solicitud);
 });
 
 app.listen(PORT, () => {
